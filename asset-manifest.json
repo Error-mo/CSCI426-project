@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Error-mo/CSCI426-project.git/static/css/main.76375b76.css",
+    "main.js": "/Error-mo/CSCI426-project.git/static/js/main.559a5389.js",
+    "index.html": "/Error-mo/CSCI426-project.git/index.html",
+    "main.76375b76.css.map": "/Error-mo/CSCI426-project.git/static/css/main.76375b76.css.map",
+    "main.559a5389.js.map": "/Error-mo/CSCI426-project.git/static/js/main.559a5389.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.76375b76.css",
+    "static/js/main.559a5389.js"
+  ]
+}
