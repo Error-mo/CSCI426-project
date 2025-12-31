@@ -1,15 +1,43 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { cartAPI, wishlistAPI } from "../services/api";
 
-export default function Wishlist({ wishlist, setWishlist, cart, setCart }) {
-  const removeFromWishlist = (id) => {
-    setWishlist(wishlist.filter((book) => book.id !== id));
+export default function Wishlist({
+  wishlist,
+  setWishlist,
+  cart,
+  setCart,
+  user,
+}) {
+  const removeFromWishlist = async (id) => {
+    if (!user || !user.id) return;
+
+    try {
+      await wishlistAPI.remove(user.id, id);
+      const updatedWishlist = await wishlistAPI.get(user.id);
+      setWishlist(updatedWishlist);
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+      alert("Failed to remove from wishlist");
+    }
   };
 
-  const addToCart = (book) => {
+  const addToCart = async (book) => {
+    if (!user || !user.id) {
+      alert("Please login to add items to cart");
+      return;
+    }
+
     const isInCart = cart.some((b) => b.id === book.id);
-    if (!isInCart) {
-      setCart([...cart, book]);
+    if (isInCart) return;
+
+    try {
+      await cartAPI.add(user.id, book.id);
+      const updatedCart = await cartAPI.get(user.id);
+      setCart(updatedCart);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add to cart");
     }
   };
 
@@ -106,4 +134,3 @@ export default function Wishlist({ wishlist, setWishlist, cart, setCart }) {
     </div>
   );
 }
-

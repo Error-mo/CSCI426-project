@@ -1,31 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { cartAPI } from "../services/api";
 
-export default function Checkout({ cart, setCart }) {
+export default function Checkout({ cart, setCart, user }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: ''
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState('credit');
+  const [paymentMethod, setPaymentMethod] = useState("credit");
   const [cardData, setCardData] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: ''
+    cardNumber: "",
+    cardName: "",
+    expiryDate: "",
+    cvv: "",
   });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -33,7 +34,7 @@ export default function Checkout({ cart, setCart }) {
     const { name, value } = e.target;
     setCardData({
       ...cardData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -41,23 +42,47 @@ export default function Checkout({ cart, setCart }) {
   const tax = total * 0.1; // 10% tax
   const finalTotal = total + tax;
 
-  const handleCheckout = (e) => {
+  const handleCheckout = async (e) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!formData.fullName || !formData.email || !formData.address) {
-      alert('Please fill in all required fields');
+      alert("Please fill in all required fields");
       return;
     }
 
-    if (paymentMethod === 'credit' && (!cardData.cardNumber || !cardData.cardName || !cardData.expiryDate || !cardData.cvv)) {
-      alert('Please fill in all payment details');
+    if (
+      paymentMethod === "credit" &&
+      (!cardData.cardNumber ||
+        !cardData.cardName ||
+        !cardData.expiryDate ||
+        !cardData.cvv)
+    ) {
+      alert("Please fill in all payment details");
       return;
     }
 
-    alert(`Thank you ${formData.fullName}! Your order for ${cart.length} book(s) totaling $${finalTotal.toFixed(2)} has been placed successfully.`);
-    setCart([]);
-    navigate('/');
+    // Clear cart if user is logged in
+    if (user && user.id) {
+      try {
+        await cartAPI.clear(user.id);
+        setCart([]);
+      } catch (error) {
+        console.error("Error clearing cart:", error);
+        // Still show success message even if cart clear fails
+      }
+    } else {
+      setCart([]);
+    }
+
+    alert(
+      `Thank you ${formData.fullName}! Your order for ${
+        cart.length
+      } book(s) totaling $${finalTotal.toFixed(
+        2
+      )} has been placed successfully.`
+    );
+    navigate("/");
   };
 
   if (cart.length === 0) {
@@ -67,7 +92,7 @@ export default function Checkout({ cart, setCart }) {
           <div className="empty-cart-message">
             <h2>Your cart is empty</h2>
             <p>Add some books to your cart before checkout.</p>
-            <button className="btn btn-primary" onClick={() => navigate('/')}>
+            <button className="btn btn-primary" onClick={() => navigate("/")}>
               Continue Shopping
             </button>
           </div>
@@ -191,7 +216,7 @@ export default function Checkout({ cart, setCart }) {
                         type="radio"
                         name="paymentMethod"
                         value="credit"
-                        checked={paymentMethod === 'credit'}
+                        checked={paymentMethod === "credit"}
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       />
                       <span>💳 Credit Card</span>
@@ -201,7 +226,7 @@ export default function Checkout({ cart, setCart }) {
                         type="radio"
                         name="paymentMethod"
                         value="debit"
-                        checked={paymentMethod === 'debit'}
+                        checked={paymentMethod === "debit"}
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       />
                       <span>💳 Debit Card</span>
@@ -211,7 +236,7 @@ export default function Checkout({ cart, setCart }) {
                         type="radio"
                         name="paymentMethod"
                         value="paypal"
-                        checked={paymentMethod === 'paypal'}
+                        checked={paymentMethod === "paypal"}
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       />
                       <span>🅿️ PayPal</span>
@@ -221,14 +246,15 @@ export default function Checkout({ cart, setCart }) {
                         type="radio"
                         name="paymentMethod"
                         value="bank"
-                        checked={paymentMethod === 'bank'}
+                        checked={paymentMethod === "bank"}
                         onChange={(e) => setPaymentMethod(e.target.value)}
                       />
                       <span>🏦 Bank Transfer</span>
                     </label>
                   </div>
 
-                  {(paymentMethod === 'credit' || paymentMethod === 'debit') && (
+                  {(paymentMethod === "credit" ||
+                    paymentMethod === "debit") && (
                     <div className="card-details">
                       <div className="form-group">
                         <label htmlFor="cardNumber">Card Number *</label>
@@ -240,7 +266,10 @@ export default function Checkout({ cart, setCart }) {
                           onChange={handleCardChange}
                           placeholder="1234 5678 9012 3456"
                           maxLength="19"
-                          required={paymentMethod === 'credit' || paymentMethod === 'debit'}
+                          required={
+                            paymentMethod === "credit" ||
+                            paymentMethod === "debit"
+                          }
                         />
                       </div>
                       <div className="form-group">
@@ -251,7 +280,10 @@ export default function Checkout({ cart, setCart }) {
                           name="cardName"
                           value={cardData.cardName}
                           onChange={handleCardChange}
-                          required={paymentMethod === 'credit' || paymentMethod === 'debit'}
+                          required={
+                            paymentMethod === "credit" ||
+                            paymentMethod === "debit"
+                          }
                         />
                       </div>
                       <div className="form-row">
@@ -265,7 +297,10 @@ export default function Checkout({ cart, setCart }) {
                             onChange={handleCardChange}
                             placeholder="MM/YY"
                             maxLength="5"
-                            required={paymentMethod === 'credit' || paymentMethod === 'debit'}
+                            required={
+                              paymentMethod === "credit" ||
+                              paymentMethod === "debit"
+                            }
                           />
                         </div>
                         <div className="form-group">
@@ -278,16 +313,22 @@ export default function Checkout({ cart, setCart }) {
                             onChange={handleCardChange}
                             placeholder="123"
                             maxLength="4"
-                            required={paymentMethod === 'credit' || paymentMethod === 'debit'}
+                            required={
+                              paymentMethod === "credit" ||
+                              paymentMethod === "debit"
+                            }
                           />
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {(paymentMethod === 'paypal' || paymentMethod === 'bank') && (
+                  {(paymentMethod === "paypal" || paymentMethod === "bank") && (
                     <div className="payment-info">
-                      <p>You will be redirected to complete your payment after placing the order.</p>
+                      <p>
+                        You will be redirected to complete your payment after
+                        placing the order.
+                      </p>
                     </div>
                   )}
                 </section>
@@ -301,13 +342,15 @@ export default function Checkout({ cart, setCart }) {
             <div className="checkout-summary">
               <h2>Order Summary</h2>
               <div className="order-items">
-                {cart.map(book => (
+                {cart.map((book) => (
                   <div key={book.id} className="order-item">
                     <div className="order-item-info">
                       <h4>{book.title}</h4>
                       <p className="order-item-author">{book.author}</p>
                     </div>
-                    <p className="order-item-price">${book.price?.toFixed(2)}</p>
+                    <p className="order-item-price">
+                      ${book.price?.toFixed(2)}
+                    </p>
                   </div>
                 ))}
               </div>

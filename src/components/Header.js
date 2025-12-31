@@ -68,7 +68,9 @@ export default function Header({
 
           {user ? (
             <div className="user-menu">
-              <span className="user-greeting">Hello, {user}</span>
+              <span className="user-greeting">
+                Hello, {user.username || user}
+              </span>
               {isAdmin && (
                 <Link to="/admin" className="admin-link">
                   Admin Panel

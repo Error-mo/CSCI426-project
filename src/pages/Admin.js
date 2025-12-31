@@ -1,31 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { bookAPI } from "../services/api";
 
-export default function Admin({ books, setBooks, isAdmin }) {
+export default function Admin({ books, refreshBooks, isAdmin, user }) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    title: '',
-    author: '',
-    price: '',
-    category: '',
-    image: '',
-    description: ''
+    title: "",
+    author: "",
+    price: "",
+    category: "",
+    image: "",
+    description: "",
   });
-  const [imagePreview, setImagePreview] = useState('');
+  const [imagePreview, setImagePreview] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Redirect if not admin
   React.useEffect(() => {
-    const adminStatus = localStorage.getItem('isAdmin') === 'true';
-    if (!adminStatus) {
-      navigate('/login');
+    if (!isAdmin || !user || !user.isAdmin) {
+      navigate("/login");
     }
-  }, [navigate]);
+  }, [navigate, isAdmin, user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
+      [name]: value,
     });
   };
 
@@ -37,11 +38,11 @@ export default function Admin({ books, setBooks, isAdmin }) {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         const maxWidth = 400;
         const maxHeight = 600;
         let { width, height } = img;
-        
+
         if (width > height) {
           if (width > maxWidth) {
             height = (height * maxWidth) / width;
@@ -53,11 +54,11 @@ export default function Admin({ books, setBooks, isAdmin }) {
             height = maxHeight;
           }
         }
-        
+
         canvas.width = width;
         canvas.height = height;
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const imageData = canvas.toDataURL("image/jpeg", 0.8);
         setFormData({ ...formData, image: imageData });
         setImagePreview(imageData);
       };
@@ -66,47 +67,91 @@ export default function Admin({ books, setBooks, isAdmin }) {
     reader.readAsDataURL(file);
   };
 
-  const handleAddBook = (e) => {
+  const handleAddBook = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.author || !formData.price) {
-      alert('Please fill in all required fields (Title, Author, Price)');
+      alert("Please fill in all required fields (Title, Author, Price)");
       return;
     }
 
-    const newId = books.length ? Math.max(...books.map(b => b.id)) + 1 : 1;
-    const newBook = {
-      id: newId,
-      title: formData.title,
-      author: formData.author,
-      price: parseFloat(formData.price),
-      category: formData.category || 'Uncategorized',
-      image: formData.image || 'https://via.placeholder.com/400x600',
-      description: formData.description || '',
-      ratings: [],
-      comments: [],
-      averageRating: 0
-    };
+    if (!user || !user.id) {
+      alert("User not logged in");
+      return;
+    }
 
-    setBooks([...books, newBook]);
-    setFormData({
-      title: '',
-      author: '',
-      price: '',
-      category: '',
-      image: '',
-      description: ''
-    });
-    setImagePreview('');
-    alert('Book added successfully!');
-  };
+    setLoading(true);
+    try {
+      await bookAPI.create(
+        {
+          title: formData.title,
+          author: formData.author,
+          price: parseFloat(formData.price),
+          category: formData.category || "Uncategorized",
+          image: formData.image || "https://via.placeholder.com/400x600",
+          description: formData.description || "",
+        },
+        user.id
+      );
 
-  const removeBook = (id) => {
-    if (window.confirm('Are you sure you want to remove this book?')) {
-      setBooks(books.filter(b => b.id !== id));
+      setFormData({
+        title: "",
+        author: "",
+        price: "",
+        category: "",
+        image: "",
+        description: "",
+      });
+      setImagePreview("");
+      alert("Book added successfully!");
+
+      // Refresh books list
+      if (refreshBooks) {
+        await refreshBooks();
+      }
+    } catch (error) {
+      console.error("Error adding book:", error);
+      alert(error.message || "Failed to add book");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const categories = ['Fiction', 'Non-Fiction', 'Science', 'History', 'Self-Help', 'Programming', 'Psychology', 'Biography', 'Mystery', 'Romance'];
+  const removeBook = async (id) => {
+    if (!user || !user.id) {
+      alert("User not logged in");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to remove this book?")) {
+      return;
+    }
+
+    try {
+      await bookAPI.delete(id, user.id);
+      alert("Book removed successfully!");
+
+      // Refresh books list
+      if (refreshBooks) {
+        await refreshBooks();
+      }
+    } catch (error) {
+      console.error("Error removing book:", error);
+      alert(error.message || "Failed to remove book");
+    }
+  };
+
+  const categories = [
+    "Fiction",
+    "Non-Fiction",
+    "Science",
+    "History",
+    "Self-Help",
+    "Programming",
+    "Psychology",
+    "Biography",
+    "Mystery",
+    "Romance",
+  ];
 
   return (
     <div className="page-container">
@@ -171,8 +216,10 @@ export default function Admin({ books, setBooks, isAdmin }) {
                       onChange={handleInputChange}
                     >
                       <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -205,20 +252,31 @@ export default function Admin({ books, setBooks, isAdmin }) {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-primary">Add Book</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? "Adding..." : "Add Book"}
+                </button>
               </form>
             </section>
 
             <section className="admin-books-section">
               <h2>All Books ({books.length})</h2>
               <div className="admin-books-grid">
-                {books.map(book => (
+                {books.map((book) => (
                   <div key={book.id} className="admin-book-card">
-                    <img src={book.image || 'https://via.placeholder.com/200x300'} alt={book.title} />
+                    <img
+                      src={book.image || "https://via.placeholder.com/200x300"}
+                      alt={book.title}
+                    />
                     <div className="admin-book-info">
                       <h3>{book.title}</h3>
                       <p className="admin-book-author">{book.author}</p>
-                      <p className="admin-book-price">${book.price?.toFixed(2)}</p>
+                      <p className="admin-book-price">
+                        ${book.price?.toFixed(2)}
+                      </p>
                       <p className="admin-book-category">{book.category}</p>
                       <button
                         className="btn btn-danger btn-small"
