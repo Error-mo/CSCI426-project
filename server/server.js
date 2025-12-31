@@ -13,14 +13,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MySQL Database Connection (XAMPP)
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  port: 3307,
-  password: '', // Default XAMPP password is empty
-  database: 'bookstore_db',
-  multipleStatements: true
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
+
 
 // Connect to database
 db.connect((err) => {
