@@ -5,10 +5,12 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://error-mo.github.io"],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -25,37 +27,14 @@ const db = mysql.createPool({
   queueLimit: 0,
 });
 
-
 // Connect to database
-db.connect((err) => {
+// Test DB connection (pool) and then init tables/data
+db.query("SELECT 1", (err) => {
   if (err) {
-    console.error('Database connection failed:', err);
-    // Try to create database if it doesn't exist
-    const connectionWithoutDb = mysql.createConnection({
-      host: 'localhost',
-      user: 'root',
-      password: ''
-    });
-    
-    connectionWithoutDb.query('CREATE DATABASE IF NOT EXISTS bookstore_db', (err) => {
-      if (err) {
-        console.error('Error creating database:', err);
-      } else {
-        console.log('Database created successfully');
-        connectionWithoutDb.end();
-        // Reconnect with database
-        db.changeUser({ database: 'bookstore_db' }, (err) => {
-          if (err) {
-            console.error('Error connecting to database:', err);
-          } else {
-            console.log('Connected to MySQL database');
-            initializeDatabase();
-          }
-        });
-      }
-    });
+    console.error("Database connection failed:", err);
+    process.exit(1); // stop app so you see the error in logs
   } else {
-    console.log('Connected to MySQL database');
+    console.log("Connected to MySQL database");
     initializeDatabase();
   }
 });
@@ -667,6 +646,7 @@ app.post('/api/books/:id/comment', (req, res) => {
 // ============================================
 // API ROUTES - CART
 // ============================================
+app.get("/api/health", (req, res) => res.json({ ok: true }));
 
 // Get user cart
 app.get('/api/cart/:userId', (req, res) => {
@@ -836,8 +816,8 @@ app.delete('/api/wishlist', (req, res) => {
 // SERVER START
 // ============================================
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`API endpoints available at http://localhost:${PORT}/api`);
-});
+const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || "0.0.0.0";
+app.listen(PORT, HOST, () => console.log(`running on ${HOST}:${PORT}`));
+
 
